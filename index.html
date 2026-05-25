@@ -147,96 +147,97 @@
     </div>
 
     <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const filePreview = document.getElementById('file-preview');
-        const fileNameDisplay = document.getElementById('file-name-display');
-        const removeFileBtn = document.getElementById('remove-file-btn');
+const N8N_WEBHOOK_URL = "https://flashbulb-encrypt-hyphen.ngrok-free.dev/webhook-test/recibir-justificantes";
+
+        // Mapeo Operacional de Elementos DOM
         const absenceForm = document.getElementById('absence-form');
+        const fileInput = document.getElementById('evidence');
+        const filePreview = document.getElementById('file-preview');
+        const fileNameDisplay = document.getElementById('file-name');
+        const removeFileBtn = document.getElementById('remove-file');
         const submitBtn = document.getElementById('submit-btn');
-        const customModal = document.getElementById('custom-modal');
-        const modalIconContainer = document.getElementById('modal-icon-container');
-        const modalTitle = document.getElementById('modal-title');
-        const modalMessage = document.getElementById('modal-message');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
 
         let base64File = null;
         let selectedFileName = "";
 
-        function showCustomModal(type, title, message) {
-            modalTitle.textContent = title;
-            modalMessage.textContent = message;
-            modalIconContainer.className = "modal-icon"; 
-            if (type === 'success') {
-                modalIconContainer.classList.add('success');
-                modalIconContainer.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-            } else {
-                modalIconContainer.classList.add('error');
-                modalIconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-            }
-            customModal.classList.remove('hidden');
-        }
-
-        modalCloseBtn.addEventListener('click', () => {
-            customModal.classList.add('hidden');
+        // Transmisión asíncrona: Conversión binaria de archivos a formato Base64
+        const parseFileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
         });
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--accent-violet)"; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = "#2e2e48"; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = "#2e2e48";
-            if (e.dataTransfer.files.length > 0) processSelectedFile(e.dataTransfer.files[0]);
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) processSelectedFile(e.target.files[0]);
-        });
+        // Captura y renderizado estético del archivo dentro del formulario
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-        async function processSelectedFile(file) {
             selectedFileName = file.name;
-            fileNameDisplay.textContent = file.name;
+            fileNameDisplay.textContent = file.name.toUpperCase();
             filePreview.classList.remove('hidden');
+
             try {
                 base64File = await parseFileToBase64(file);
-            } catch (e) {
-                console.error("Error codificando archivo", e);
+            } catch (err) {
+                console.error("Fallo de codificación binaria:", err);
+                showCustomModal('error', 'ERROR DE LECTURA', 'No se pudo procesar analíticamente el archivo adjunto.');
             }
-        }
-
-        removeFileBtn.addEventListener('click', () => {
-            fileInput.value = "";
-            base64File = null;
-            selectedFileName = "";
-            filePreview.classList.add('hidden');
         });
 
-        function parseFileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
+        // Liberar el búfer de archivos del formulario
+        removeFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+            base64File = null;
+            selectedFileName = "";
+        });
+
+        // Modales de Alertas Integradas del Sistema Aether
+        function showCustomModal(type, title, message) {
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+            
+            const icon = type === 'success' ? 'fa-circle-check success' : 'fa-triangle-exclamation error';
+            
+            modalOverlay.innerHTML = `
+                <div class="modal-box">
+                    <div class="modal-icon"><i class="fa-solid ${icon}"></i></div>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <button class="modal-btn">Aceptar</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modalOverlay);
+            
+            modalOverlay.querySelector('.modal-btn').onclick = () => {
+                modalOverlay.remove();
+            };
         }
 
-        absenceForm.addEventListener('submit', (e) => {
+        // ORQUESTACIÓN DE DESPACHO E INTEGRACIÓN CON N8N
+        absenceForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.querySelector('span').textContent = "Transmitiendo...";
 
-            // Generamos un IA score aleatorio
-            const calculatedScore = Math.floor(Math.random() * 60) + 40; 
-            // Si el score es mayor a 85 se aprueba automáticamente, sino queda pendiente
+            // Deshabilitar UI para mitigar duplicaciones accidentales en ráfaga
+            submitBtn.disabled = true;
+            submitBtn.querySelector('span').textContent = "CONECTANDO CON CORE...";
+
+            // Lógica heurística: Puntuación predictiva IA simulada basada en vector de motivo
+            const scoreMap = { 'Médico': 90, 'Familiar': 75, 'Legal': 95, 'Otros': 60 };
+            const selectedReason = document.getElementById('reason').value;
+            const calculatedScore = scoreMap[selectedReason] || 50;
             const calculatedStatus = calculatedScore >= 85 ? 'valid' : 'pending';
 
-            const newRecord = {
-                id: 'AETHER-' + Date.now(),
+            // Construcción del Payload Estructurado Lineal
+            const payload = {
+                id: 'TX-' + Math.floor(100000 + Math.random() * 900000),
                 name: document.getElementById('studentName').value,
-                carne: document.getElementById('studentId').value,
+                carne: document.getElementById('studentCarne').value,
                 email: document.getElementById('studentEmail').value,
                 subject: document.getElementById('subjectClass').value,
-                reason: document.getElementById('reason').value,
+                reason: selectedReason,
                 startDate: document.getElementById('startDate').value,
                 endDate: document.getElementById('endDate').value,
                 description: document.getElementById('description').value,
@@ -247,20 +248,37 @@
                 date: new Date().toISOString().split('T')[0]
             };
 
-            // Lectura de base existente en localStorage
-            let currentLocalData = JSON.parse(localStorage.getItem('aether_students')) || [];
-            currentLocalData.unshift(newRecord); // Insertar al inicio
-            localStorage.setItem('aether_students', JSON.stringify(currentLocalData));
+            try {
+                // 1. TRANSMISIÓN EXTERNA (n8n Webhook Endpoint)
+                const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            setTimeout(() => {
-                showCustomModal('success', 'DESPACHO COMPLETADO', 'Los datos operacionales han sido inyectados al bus cuántico de Aether IA exitosamente.');
+                if (!n8nResponse.ok) {
+                    throw new Error(`n8n HTTP Gateway Status Error: ${n8nResponse.status}`);
+                }
+
+                // 2. SINCRONIZACIÓN LOCAL (Inyección cruzada al Bus Maestro por LocalStorage)
+                let currentLocalData = JSON.parse(localStorage.getItem('aether_students')) || [];
+                currentLocalData.unshift(payload);
+                localStorage.setItem('aether_students', JSON.stringify(currentLocalData));
+
+                // Sincronización exitosa
+                showCustomModal('success', 'DESPACHO COMPLETADO', 'Los datos operacionales han sido procesados por n8n e inyectados al bus de Aether IA exitosamente.');
                 absenceForm.reset();
                 filePreview.classList.add('hidden');
                 base64File = null;
                 selectedFileName = "";
+
+            } catch (err) {
+                console.error("Fallo en la pasarela de transmisión de red:", err);
+                showCustomModal('error', 'FALLO DE RED / CORS', 'No se pudo conectar de manera asíncrona con n8n. Verifique que su túnel de red esté activo y reciba cargas.');
+            } finally {
                 submitBtn.disabled = false;
                 submitBtn.querySelector('span').textContent = "Despachar Formulario";
-            }, 800);
+            }
         });
     </script>
 </body>
